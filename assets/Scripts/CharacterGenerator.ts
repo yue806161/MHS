@@ -20,11 +20,7 @@ interface Personality {
 
 interface CharacterTemplate {
   traits: { [key: string]: Trait };
-  backgrounds: {
-    education: { [key: string]: { name: string; effects: TraitEffect } };
-    family: { [key: string]: { name: string; effects: TraitEffect } };
-    workExperience: { [key: string]: { name: string; effects: TraitEffect } };
-  };
+  backgrounds: any;
   personalities: { [key: string]: Personality };
 }
 
@@ -77,7 +73,9 @@ export class CharacterGenerator extends Component {
     };
   }
 
-  initTraits(traits: { [key: string]: Trait }): { [key: string]: number } {
+  private initTraits(traits: { [key: string]: Trait }): {
+    [key: string]: number;
+  } {
     let initializedTraits: { [key: string]: number } = {};
     for (const traitKey in traits) {
       const trait = traits[traitKey];
@@ -92,18 +90,16 @@ export class CharacterGenerator extends Component {
     return initializedTraits;
   }
 
-  getRandomBackground(backgrounds: {
-    [key: string]: { [key: string]: { name: string; effects: TraitEffect } };
-  }) {
+  private getRandomBackground(backgrounds: any): any {
     let randomBackground = {};
     for (const category in backgrounds) {
       const categoryItems = backgrounds[category];
-      const itemKeys = Object.keys(categoryItems);
-      const randomKey = itemKeys[Math.floor(Math.random() * itemKeys.length)];
       if (!categoryItems || Object.keys(categoryItems).length === 0) {
         console.error(`No items found for background category '${category}'`);
         continue;
       }
+      const itemKeys = Object.keys(categoryItems);
+      const randomKey = itemKeys[Math.floor(Math.random() * itemKeys.length)];
       randomBackground[category] = categoryItems[randomKey];
       console.log(
         `Selected background for '${category}': '${randomBackground[category].name}'`
@@ -112,44 +108,42 @@ export class CharacterGenerator extends Component {
     return randomBackground;
   }
 
-  getRandomPersonalities(
+  private getRandomPersonalities(
     personalities: { [key: string]: Personality },
     min: number,
     max: number
-  ) {
-    if (!personalities || Object.keys(personalities).length === 0) {
+  ): Personality[] {
+    if (Object.keys(personalities).length === 0) {
       console.error("Personalities object is empty or undefined.");
-      return []; // 返回一个空数组，避免进一步的错误
+      return [];
     }
 
-    let chosenPersonalities: Personality[] = [];
-    let availablePersonalitiesKeys = Object.keys(personalities);
-    const count = Math.min(
-      Math.floor(Math.random() * (max - min + 1) + min),
-      availablePersonalitiesKeys.length
+    let availablePersonalities = Object.keys(personalities).map(
+      (key) => personalities[key]
     );
+    let chosenPersonalities: Personality[] = [];
+    const count = Math.floor(Math.random() * (max - min + 1) + min);
 
     while (
       chosenPersonalities.length < count &&
-      availablePersonalitiesKeys.length > 0
+      availablePersonalities.length > 0
     ) {
       const randomIndex = Math.floor(
-        Math.random() * availablePersonalitiesKeys.length
+        Math.random() * availablePersonalities.length
       );
-      const chosenPersonalityKey = availablePersonalitiesKeys[randomIndex];
-      const chosenPersonality = personalities[chosenPersonalityKey];
+      const chosenPersonality = availablePersonalities[randomIndex];
 
       if (!this.isExclusive(chosenPersonality, chosenPersonalities)) {
         chosenPersonalities.push(chosenPersonality);
-        console.log(`Selected personality: '${chosenPersonality.name}'`);
+        // Immediately remove the chosen personality from the pool to avoid re-checking its exclusivity
+        availablePersonalities.splice(randomIndex, 1);
       }
-
-      availablePersonalitiesKeys.splice(randomIndex, 1);
     }
+
     return chosenPersonalities;
   }
 
-  isExclusive(
+  private isExclusive(
     newPersonality: Personality,
     chosenPersonalities: Personality[]
   ): boolean {
@@ -163,34 +157,28 @@ export class CharacterGenerator extends Component {
     });
   }
 
-  applyEffects(
+  private applyEffects(
     traits: { [key: string]: number },
     background: any,
     personalities: Personality[]
   ) {
     // Apply background effects to traits
-    for (const bgCategory in background) {
+    Object.keys(background).forEach((bgCategory) => {
       const bgEffects = background[bgCategory].effects;
-      for (const effect in bgEffects) {
+      Object.keys(bgEffects).forEach((effect) => {
         if (traits.hasOwnProperty(effect)) {
           traits[effect] += bgEffects[effect];
-          console.log(
-            `Applied background effect on ${effect}: +${bgEffects[effect]}`
-          );
         }
-      }
-    }
+      });
+    });
 
     // Apply personality effects to traits
     personalities.forEach((personality) => {
-      for (const effect in personality.effects) {
+      Object.keys(personality.effects).forEach((effect) => {
         if (traits.hasOwnProperty(effect)) {
           traits[effect] += personality.effects[effect];
-          console.log(
-            `Applied personality effect from ${personality.name} on ${effect}: +${personality.effects[effect]}`
-          );
         }
-      }
+      });
     });
   }
 }
